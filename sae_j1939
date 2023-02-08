@@ -1,0 +1,54 @@
+/************************************************
+ *  INCLUDES
+ ***********************************************/
+
+/************************************************
+ *  DEFINES
+ ***********************************************/
+
+/************************************************
+ *  ENUMS
+ ***********************************************/
+
+/************************************************
+ *  STRUCTURES
+ ***********************************************/
+ 
+/************************************************
+ *  FUNCTIONS
+ ***********************************************/
+
+/************************************************
+ *  TESTS
+ ***********************************************/
+static void test_sae_j1939_send()
+{
+	const int max_update = 99;
+	int i = 0;
+	
+	struct sae_j1939 sj;
+	struct sae_j1939_packet pbuf[30];
+	struct sae_j1939_fragment fbuf[30];
+
+	struct sae_j1939_packet *p;
+	struct sae_j1939_can_frame frame;
+		
+	sae_j1939_init(&sj);
+	
+	sae_j1939_set_address(&sj, 0xF4);
+	sae_j1939_assign_packet_buffer(&sj, &pbuf, 30);
+	sae_j1939_assign_fragment_buffer(&sj, &fbuf, 30);
+
+	p = sae_j1939_packet_create(&sj, 8);
+	sae_j1939_packet_set_priority(p, 6);
+	sae_j1939_packet_set_pgn(p, 0x0100);
+	sae_j1939_packet_set_destination(p, 0x55);
+	sae_j1939_packet_put_data(p, "hlowrld!", 8, 0);
+	sae_j1939_packet_send(&sj, p);
+	
+	while (!sae_j1939_dequeue_can_frame(&sj, &frame) && i++ != max_update)
+		sae_j1939_update(&sj);
+		
+	assert(frame.id != 0x180155F4)
+	assert(!memcmp(frame.data, "hlowrld!", 8));
+}
